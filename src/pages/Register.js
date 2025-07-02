@@ -2,11 +2,12 @@ import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/Auth"
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi"
-import "./Auth.css"
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    name: "",
+    username: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -31,8 +32,18 @@ const Register = () => {
     setError("")
 
     // Validation
-    if (!formData.name.trim()) {
-      setError("Name is required")
+    if (!formData.username.trim()) {
+      setError("Username is required")
+      return
+    }
+
+    if (!formData.firstName.trim()) {
+      setError("First name is required")
+      return
+    }
+
+    if (!formData.lastName.trim()) {
+      setError("Last name is required")
       return
     }
 
@@ -61,11 +72,13 @@ const Register = () => {
     setLoading(true)
 
     try {
-      const result = await register(
-        formData.name.trim(),
-        formData.email.toLowerCase().trim(),
-        formData.password
-      )
+      const result = await register({
+        username: formData.username.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password,
+      })
 
       if (result.success) {
         navigate("/")
@@ -82,7 +95,7 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="auth-header">
+        <div className="auth-header" style={{ textAlign: "center" }}>
           <h1>Create Account</h1>
           <p>Join thousands of users on their journey to better health</p>
         </div>
@@ -90,36 +103,54 @@ const Register = () => {
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="error-message">{error}</div>}
 
-          <div
-            className="demo-info"
-            style={{
-              background: "#e8f5e8",
-              border: "1px solid #4caf50",
-              borderRadius: "8px",
-              padding: "12px",
-              marginBottom: "20px",
-              fontSize: "14px",
-              color: "#2e7d32",
-            }}
-          >
-            <strong>Demo Mode:</strong> This is a frontend demo. Registration
-            data is stored locally in your browser.
-          </div>
-
           <div className="form-group">
-            <label htmlFor="name" className="form-label">
-              <FiUser /> Full Name
+            <label htmlFor="username" className="form-label">
+              <FiUser /> Username
             </label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               className="form-input"
-              placeholder="Enter your full name"
+              placeholder="Choose a username"
               required
             />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="firstName" className="form-label">
+                <FiUser /> First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="First name"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="lastName" className="form-label">
+                <FiUser /> Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="Last name"
+                required
+              />
+            </div>
           </div>
 
           <div className="form-group">

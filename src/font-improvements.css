@@ -1,0 +1,112 @@
+/* Font improvements for the Recipes page */
+.recipes-page {
+  min-height: 100vh;
+  padding-bottom: 2rem;
+}
+
+/* Increase font size and improve readability */
+.recipe-title {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  /* Make the gradient text more readable */
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+.recipe-description {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  color: #4b5563 !important; /* Darker gray for better contrast */
+  font-weight: 400 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Make the recipe cards more readable */
+.recipe-card {
+  background: #ffffff !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.recipe-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Improve recipe meta information display */
+.recipe-meta {
+  font-size: 0.9rem !important;
+  color: #6b7280 !important; /* Medium gray */
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  margin-top: 0.5rem !important;
+}
+
+.meta-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+.meta-item svg {
+  color: #059669 !important; /* Brand green */
+}
+
+/* Fix the tag display */
+.tag {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 9999px !important;
+  background-color: #e9faf2 !important; /* Light green */
+  color: #059669 !important; /* Brand green */
+  margin-right: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.recipe-badges {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.recipe-image {
+  position: relative !important;
+  width: 100% !important;
+  height: 200px !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
+  margin-bottom: 1rem !important;
+  background-color: #f3f4f6 !important;
+}
+
+.recipe-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  transition: transform 0.3s ease !important;
+}
+
+.recipe-img:hover {
+  transform: scale(1.05) !important;
+}
+
+.recipe-emoji {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 3rem !important;
+  background-color: #e9faf2 !important;
+  color: #059669 !important;
+}

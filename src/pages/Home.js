@@ -1,9 +1,35 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { FiTrendingUp, FiHeart, FiCalendar, FiUsers } from "react-icons/fi"
-import "./Home.css"
+import recipesAPI from "../services/recipesAPI"
 
 const Home = () => {
+  const [stats, setStats] = useState({
+    recipesCount: 0,
+    usersCount: 0,
+    successRate: 95,
+    support: "24/7",
+  })
+
+  useEffect(() => {
+    // Fetch real stats from backend
+    const fetchStats = async () => {
+      try {
+        const recipesResponse = await recipesAPI.getRecipes()
+        if (recipesResponse.success) {
+          setStats((prev) => ({
+            ...prev,
+            recipesCount: recipesResponse.data.length,
+          }))
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
   const features = [
     {
       icon: <FiTrendingUp />,
@@ -53,9 +79,6 @@ const Home = () => {
                 <Link to="/recipes" className="btn btn-primary btn-large">
                   Explore Recipes
                 </Link>
-                <Link to="/register" className="btn btn-outline btn-large">
-                  Get Started Free
-                </Link>
               </div>
             </div>
             <div className="hero-image">
@@ -63,11 +86,11 @@ const Home = () => {
                 <div className="recipe-preview">
                   <div className="recipe-image-placeholder">🥗</div>
                   <div className="recipe-info">
-                    <h3>Mediterranean Bowl</h3>
-                    <p>320 calories • 25min</p>
+                    <h3>Healthy Recipes</h3>
+                    <p>Nutritious • Delicious</p>
                     <div className="recipe-tags">
-                      <span className="tag">Low Carb</span>
-                      <span className="tag">High Protein</span>
+                      <span className="tag">Fresh</span>
+                      <span className="tag">Healthy</span>
                     </div>
                   </div>
                 </div>
@@ -104,7 +127,7 @@ const Home = () => {
         <div className="container">
           <div className="stats-grid">
             <div className="stat-item">
-              <div className="stat-number">500+</div>
+              <div className="stat-number">{stats.recipesCount}+</div>
               <div className="stat-label">Healthy Recipes</div>
             </div>
             <div className="stat-item">
@@ -112,29 +135,13 @@ const Home = () => {
               <div className="stat-label">Happy Users</div>
             </div>
             <div className="stat-item">
-              <div className="stat-number">95%</div>
+              <div className="stat-number">{stats.successRate}%</div>
               <div className="stat-label">Success Rate</div>
             </div>
             <div className="stat-item">
-              <div className="stat-number">24/7</div>
+              <div className="stat-number">{stats.support}</div>
               <div className="stat-label">Support</div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta">
-        <div className="container">
-          <div className="cta-content">
-            <h2>Ready to Transform Your Health?</h2>
-            <p>
-              Join thousands of users who have already started their journey to
-              a healthier lifestyle.
-            </p>
-            <Link to="/register" className="btn btn-primary btn-large">
-              Start Your Journey Today
-            </Link>
           </div>
         </div>
       </section>

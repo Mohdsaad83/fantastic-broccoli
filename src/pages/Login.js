@@ -2,7 +2,6 @@ import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/Auth"
 import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi"
-import "./Auth.css"
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -66,28 +65,13 @@ const Login = () => {
           <p>Sign in to your account to continue your healthy journey</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
           {error && <div className="error-message">{error}</div>}
-
-          <div
-            className="demo-info"
-            style={{
-              background: "#e3f2fd",
-              border: "1px solid #2196f3",
-              borderRadius: "8px",
-              padding: "12px",
-              marginBottom: "20px",
-              fontSize: "14px",
-              color: "#1565c0",
-            }}
-          >
-            <strong>Demo Mode:</strong> Register first to create an account,
-            then use those credentials to log in.
-          </div>
 
           <div className="form-group">
             <label htmlFor="email" className="form-label">
-              <FiMail /> Email Address
+              <FiMail style={{ marginRight: 6, color: "#10b981" }} /> Email
+              Address
             </label>
             <input
               type="email"
@@ -98,12 +82,13 @@ const Login = () => {
               className="form-input"
               placeholder="Enter your email"
               required
+              autoComplete="username"
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              <FiLock /> Password
+              <FiLock style={{ marginRight: 6, color: "#10b981" }} /> Password
             </label>
             <div className="password-input">
               <input
@@ -115,10 +100,12 @@ const Login = () => {
                 className="form-input"
                 placeholder="Enter your password"
                 required
+                autoComplete="current-password"
               />
               <button
                 type="button"
                 className="password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
@@ -130,6 +117,7 @@ const Login = () => {
             type="submit"
             className="btn btn-primary btn-full"
             disabled={loading}
+            aria-busy={loading}
           >
             {loading ? "Signing In..." : "Sign In"}
           </button>

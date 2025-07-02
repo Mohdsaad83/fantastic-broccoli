@@ -1,44 +1,10 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { FiPlus, FiTrash2, FiCalendar, FiClock, FiUsers } from "react-icons/fi"
-import "./MealPlanner.css"
-
-// Sample recipes
-const sampleRecipes = [
-  {
-    id: 1,
-    title: "Mediterranean Quinoa Bowl",
-    calories: 320,
-    cookingTime: 25,
-    servings: 2,
-    image: "🥗",
-  },
-  {
-    id: 2,
-    title: "Grilled Salmon with Avocado",
-    calories: 380,
-    cookingTime: 20,
-    servings: 4,
-    image: "🐟",
-  },
-  {
-    id: 3,
-    title: "Green Smoothie Bowl",
-    calories: 280,
-    cookingTime: 10,
-    servings: 1,
-    image: "🥤",
-  },
-  {
-    id: 4,
-    title: "Zucchini Noodles with Pesto",
-    calories: 195,
-    cookingTime: 15,
-    servings: 2,
-    image: "🍝",
-  },
-]
+import recipesAPI from "../services/recipesAPI"
+import { useAuth } from "../contexts/Auth"
 
 const MealPlanner = () => {
+  const { user } = useAuth()
   const [selectedWeek, setSelectedWeek] = useState(new Date())
   const [mealPlan, setMealPlan] = useState({})
   const [availableRecipes, setAvailableRecipes] = useState([])
@@ -56,14 +22,45 @@ const MealPlanner = () => {
   ]
   const mealTypes = ["breakfast", "lunch", "dinner", "snack"]
 
+  // Get user-specific localStorage key
+  const getMealPlanKey = useCallback(() => {
+    return user ? `mealPlan_${user.id}` : "mealPlan"
+  }, [user])
+
   useEffect(() => {
-    setAvailableRecipes(sampleRecipes)
-    // Load saved meal plan from localStorage or API
-    const savedMealPlan = localStorage.getItem("mealPlan")
-    if (savedMealPlan) {
-      setMealPlan(JSON.parse(savedMealPlan))
+    // Fetch real recipes from API
+    const fetchRecipes = async () => {
+      try {
+        const response = await recipesAPI.getRecipes()
+        const recipes = response.data || []
+        // Transform recipes to match the expected format for meal planning
+        const transformedRecipes = recipes.map((recipe) => ({
+          id: recipe._id,
+          title: recipe.title,
+          calories: recipe.nutrition?.calories || 0,
+          cookingTime: (recipe.prepTime || 0) + (recipe.cookTime || 0),
+          servings: recipe.servings || 1,
+          imageUrl:
+            recipe.image || recipe.imageUrl || "/recipe-images/default.jpg",
+        }))
+        setAvailableRecipes(transformedRecipes)
+      } catch (error) {
+        console.error("Failed to fetch recipes:", error)
+        // Keep empty array if fetch fails
+        setAvailableRecipes([])
+      }
     }
-  }, [])
+
+    fetchRecipes()
+
+    // Load saved meal plan from localStorage (user-specific)
+    if (user) {
+      const savedMealPlan = localStorage.getItem(getMealPlanKey())
+      if (savedMealPlan) {
+        setMealPlan(JSON.parse(savedMealPlan))
+      }
+    }
+  }, [user, getMealPlanKey])
 
   const getWeekDates = (startDate) => {
     const week = []
@@ -88,14 +85,24 @@ const MealPlanner = () => {
   }
 
   const addRecipeToMealPlan = (recipe) => {
+    if (!selectedSlot.day || !selectedSlot.mealType) {
+      console.error("Missing slot information:", selectedSlot)
+      alert("Please select a meal slot.")
+      return
+    }
+
     const key = `${selectedSlot.day}-${selectedSlot.mealType}`
+
     const newMealPlan = {
       ...mealPlan,
       [key]: recipe,
     }
+
     setMealPlan(newMealPlan)
-    localStorage.setItem("mealPlan", JSON.stringify(newMealPlan))
+    // Save to user-specific localStorage key
+    localStorage.setItem(getMealPlanKey(), JSON.stringify(newMealPlan))
     setShowRecipeModal(false)
+    setSelectedSlot({ day: "", mealType: "" }) // Reset slot after adding
   }
 
   const removeRecipeFromMealPlan = (day, mealType) => {
@@ -103,7 +110,8 @@ const MealPlanner = () => {
     const newMealPlan = { ...mealPlan }
     delete newMealPlan[key]
     setMealPlan(newMealPlan)
-    localStorage.setItem("mealPlan", JSON.stringify(newMealPlan))
+    // Save to user-specific localStorage key
+    localStorage.setItem(getMealPlanKey(), JSON.stringify(newMealPlan))
   }
 
   const getTotalCalories = (day) => {
@@ -219,7 +227,44 @@ const MealPlanner = () => {
                     {recipe ? (
                       <div className="meal-item">
                         <div className="meal-recipe">
-                          <span className="recipe-emoji">{recipe.image}</span>
+                          {recipe.imageUrl ? (
+                            <img
+                              src={recipe.imageUrl}
+                              alt={recipe.title}
+                              className="recipe-img"
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "50%",
+                                marginRight: "0.5rem",
+                                objectFit: "cover",
+                                backgroundColor: "#f0f0f0",
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = "none"
+                              }}
+                              onLoad={() => {
+                                // Image loaded successfully
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "50%",
+                                marginRight: "0.5rem",
+                                backgroundColor: "#e5e7eb",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "12px",
+                                color: "#6b7280",
+                              }}
+                            >
+                              IMG
+                            </div>
+                          )}
                           <div className="recipe-info">
                             <h4>{recipe.title}</h4>
                             <div className="recipe-meta">
@@ -263,7 +308,9 @@ const MealPlanner = () => {
         {showRecipeModal && (
           <div
             className="modal-overlay"
-            onClick={() => setShowRecipeModal(false)}
+            onClick={() => {
+              setShowRecipeModal(false)
+            }}
           >
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -271,7 +318,9 @@ const MealPlanner = () => {
                   Choose a recipe for {selectedSlot.day} {selectedSlot.mealType}
                 </h3>
                 <button
-                  onClick={() => setShowRecipeModal(false)}
+                  onClick={() => {
+                    setShowRecipeModal(false)
+                  }}
                   className="modal-close"
                 >
                   ×
@@ -282,10 +331,51 @@ const MealPlanner = () => {
                 {availableRecipes.map((recipe) => (
                   <div
                     key={recipe.id}
-                    onClick={() => addRecipeToMealPlan(recipe)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      addRecipeToMealPlan(recipe)
+                    }}
                     className="recipe-option"
                   >
-                    <span className="recipe-emoji">{recipe.image}</span>
+                    <div
+                      className="recipe-image"
+                      style={{ flexShrink: 0, width: "80px", height: "80px" }}
+                    >
+                      {recipe.imageUrl ? (
+                        <img
+                          src={recipe.imageUrl}
+                          alt={recipe.title}
+                          className="recipe-img"
+                          style={{
+                            width: "80px",
+                            height: "80px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            backgroundColor: "#f0f0f0",
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = "none"
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "80px",
+                            height: "80px",
+                            backgroundColor: "#e5e7eb",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "14px",
+                            color: "#6b7280",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          No Image
+                        </div>
+                      )}
+                    </div>
                     <div className="recipe-details">
                       <h4>{recipe.title}</h4>
                       <div className="recipe-meta">

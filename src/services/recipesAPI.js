@@ -5,12 +5,15 @@ class RecipesAPI {
   async getRecipes(params = {}) {
     try {
       const response = await api.get("/recipes", { params })
+      const recipes = response.data.recipes || response.data || []
+
       return {
         success: true,
-        data: response.data,
+        data: Array.isArray(recipes) ? recipes : [],
       }
     } catch (error) {
-      console.error("Error fetching recipes:", error)
+      console.error("❌ Failed to fetch recipes from database:", error)
+      console.error("❌ Error details:", error.response?.data)
       return {
         success: false,
         error: error.response?.data?.message || "Failed to fetch recipes",
@@ -23,15 +26,31 @@ class RecipesAPI {
   async getRecipeById(id) {
     try {
       const response = await api.get(`/recipes/${id}`)
+      const recipe = response.data.recipe || response.data
+
+      const transformedRecipe = {
+        ...recipe,
+        id: recipe._id || recipe.id,
+        tags: recipe.dietaryTags || recipe.tags || [],
+        tips: recipe.tips || [],
+        image: recipe.image || "🍽️",
+        ingredients: recipe.ingredients || [],
+        instructions: recipe.instructions || [],
+        rating: recipe.averageRating || 0,
+        reviews: recipe.totalRatings || 0,
+        cookingTime: (recipe.prepTime || 0) + (recipe.cookTime || 0),
+        nutrition: recipe.nutrition || {},
+      }
+
       return {
         success: true,
-        data: response.data,
+        data: transformedRecipe,
       }
     } catch (error) {
-      console.error("Error fetching recipe:", error)
+      console.error("Failed to fetch recipe from database:", error)
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch recipe",
+        error: error.response?.data?.message || "Recipe not found",
         data: null,
       }
     }
@@ -50,10 +69,10 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.error("Error searching recipes:", error)
+      console.error("Failed to search recipes:", error)
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to search recipes",
+        error: error.response?.data?.message || "Search failed",
         data: [],
       }
     }
@@ -68,12 +87,10 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.error("Error fetching recipes by category:", error)
+      console.error("Failed to fetch recipes by category:", error)
       return {
         success: false,
-        error:
-          error.response?.data?.message ||
-          "Failed to fetch recipes by category",
+        error: error.response?.data?.message || "Failed to fetch recipes",
         data: [],
       }
     }
@@ -88,7 +105,7 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.error("Error fetching featured recipes:", error)
+      console.error("Failed to fetch featured recipes:", error)
       return {
         success: false,
         error:
@@ -107,28 +124,10 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.log("API call failed, using localStorage for favorites")
-
-      // Fallback to localStorage
-      try {
-        const favorites = JSON.parse(
-          localStorage.getItem("userFavorites") || "[]"
-        )
-        if (!favorites.includes(recipeId)) {
-          favorites.push(recipeId)
-          localStorage.setItem("userFavorites", JSON.stringify(favorites))
-        }
-
-        return {
-          success: true,
-          data: { message: "Added to favorites" },
-        }
-      } catch (localError) {
-        console.error("Error saving to localStorage:", localError)
-        return {
-          success: false,
-          error: "Failed to add to favorites",
-        }
+      console.error("Failed to add to favorites:", error)
+      return {
+        success: false,
+        error: error.response?.data?.message || "Failed to add to favorites",
       }
     }
   }
@@ -142,26 +141,11 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.log("API call failed, using localStorage for favorites")
-
-      // Fallback to localStorage
-      try {
-        const favorites = JSON.parse(
-          localStorage.getItem("userFavorites") || "[]"
-        )
-        const updatedFavorites = favorites.filter((id) => id !== recipeId)
-        localStorage.setItem("userFavorites", JSON.stringify(updatedFavorites))
-
-        return {
-          success: true,
-          data: { message: "Removed from favorites" },
-        }
-      } catch (localError) {
-        console.error("Error removing from localStorage:", localError)
-        return {
-          success: false,
-          error: "Failed to remove from favorites",
-        }
+      console.error("Failed to remove from favorites:", error)
+      return {
+        success: false,
+        error:
+          error.response?.data?.message || "Failed to remove from favorites",
       }
     }
   }
@@ -175,53 +159,30 @@ class RecipesAPI {
         data: response.data,
       }
     } catch (error) {
-      console.log("API call failed, checking localStorage for favorites")
-
-      // Fallback to localStorage
-      try {
-        const favorites = JSON.parse(
-          localStorage.getItem("userFavorites") || "[]"
-        )
-        return {
-          success: true,
-          data: { isFavorite: favorites.includes(recipeId) },
-        }
-      } catch (localError) {
-        console.error("Error checking localStorage:", localError)
-        return {
-          success: false,
-          error: "Failed to check favorite status",
-        }
+      console.error("Failed to check favorite status:", error)
+      return {
+        success: false,
+        error:
+          error.response?.data?.message || "Failed to check favorite status",
+        data: { isFavorite: false },
       }
     }
   }
 
-  // Get all favorite recipes
+  // Get user's favorite recipes
   async getFavorites() {
     try {
-      const response = await api.get("/recipes/favorites")
+      const response = await api.get("/api/recipes/favorites")
       return {
         success: true,
-        data: response.data,
+        data: response.data.favorites || [],
       }
     } catch (error) {
-      console.log("API call failed, getting favorites from localStorage")
-
-      // Fallback to localStorage
-      try {
-        const favoriteIds = JSON.parse(
-          localStorage.getItem("userFavorites") || "[]"
-        )
-        return {
-          success: true,
-          data: favoriteIds,
-        }
-      } catch (localError) {
-        console.error("Error getting favorites from localStorage:", localError)
-        return {
-          success: false,
-          error: "Failed to get favorites",
-        }
+      console.error("Failed to fetch favorites:", error)
+      return {
+        success: false,
+        error: error.response?.data?.message || "Failed to fetch favorites",
+        data: [],
       }
     }
   }
@@ -229,13 +190,15 @@ class RecipesAPI {
   // Rate a recipe
   async rateRecipe(recipeId, rating) {
     try {
-      const response = await api.post(`/recipes/${recipeId}/rate`, { rating })
+      const response = await api.post(`/api/recipes/${recipeId}/ratings`, {
+        rating,
+      })
       return {
         success: true,
         data: response.data,
       }
     } catch (error) {
-      console.error("Error rating recipe:", error)
+      console.error("Failed to rate recipe:", error)
       return {
         success: false,
         error: error.response?.data?.message || "Failed to rate recipe",
@@ -246,16 +209,16 @@ class RecipesAPI {
   // Get recipe categories
   async getCategories() {
     try {
-      const response = await api.get("/recipes/categories")
+      const response = await api.get("/categories")
       return {
         success: true,
-        data: response.data,
+        data: response.data.categories || response.data || [],
       }
     } catch (error) {
-      console.error("Error fetching categories:", error)
+      console.error("Failed to fetch categories:", error)
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to fetch categories",
+        error: error.response?.data?.error || "Failed to fetch categories",
         data: [],
       }
     }
@@ -264,16 +227,118 @@ class RecipesAPI {
   // Get recipe tags
   async getTags() {
     try {
-      const response = await api.get("/recipes/tags")
+      const response = await api.get("/api/recipes/tags")
       return {
         success: true,
         data: response.data,
       }
     } catch (error) {
-      console.error("Error fetching tags:", error)
+      console.error("Failed to fetch tags:", error)
       return {
         success: false,
         error: error.response?.data?.message || "Failed to fetch tags",
+        data: [],
+      }
+    }
+  }
+
+  // Create a new recipe
+  async createRecipe(recipeData) {
+    try {
+      console.log("Sending recipe data:", recipeData)
+      const response = await api.post("/recipes", recipeData)
+      return {
+        success: true,
+        data: response.data.recipe || response.data,
+        message: response.data.message || "Recipe created successfully",
+      }
+    } catch (error) {
+      console.error("Failed to create recipe:", error)
+      console.error("Error response:", error.response?.data)
+      console.error("Error status:", error.response?.status)
+
+      // Log detailed validation errors if available
+      if (error.response?.data?.details) {
+        console.error("Validation details:", error.response.data.details)
+      }
+
+      return {
+        success: false,
+        error:
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Failed to create recipe",
+        details: error.response?.data?.details || null,
+      }
+    }
+  }
+
+  // Update existing recipe
+  async updateRecipe(recipeId, recipeData) {
+    try {
+      const response = await api.put(`/recipes/${recipeId}`, recipeData)
+      return {
+        success: true,
+        data: response.data.recipe || response.data,
+        message: response.data.message || "Recipe updated successfully",
+      }
+    } catch (error) {
+      console.error("Failed to update recipe:", error)
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to update recipe",
+      }
+    }
+  }
+
+  // Delete recipe
+  async deleteRecipe(recipeId) {
+    try {
+      const response = await api.delete(`/recipes/${recipeId}`)
+      return {
+        success: true,
+        message: response.data.message || "Recipe deleted successfully",
+      }
+    } catch (error) {
+      console.error("Failed to delete recipe:", error)
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to delete recipe",
+      }
+    }
+  }
+
+  // Get user's own recipes
+  async getUserRecipes() {
+    try {
+      const response = await api.get("/recipes/user")
+      return {
+        success: true,
+        data: response.data.recipes || response.data || [],
+      }
+    } catch (error) {
+      console.error("Failed to fetch user recipes:", error)
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to fetch your recipes",
+        data: [],
+      }
+    }
+  }
+
+  // Get all categories
+  async getAllCategories() {
+    try {
+      const response = await api.get("/categories")
+      return {
+        success: true,
+        data: response.data || [],
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to fetch categories",
         data: [],
       }
     }

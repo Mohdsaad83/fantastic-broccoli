@@ -1,30 +1,36 @@
 import React, { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, Link } from "react-router-dom"
 import {
   FiClock,
   FiUsers,
   FiHeart,
   FiArrowLeft,
-  FiPlus,
   FiCheckCircle,
+  FiEdit,
+  FiTrash2,
 } from "react-icons/fi"
 import { useRecipes } from "../hooks/useRecipes"
+import { useAuth } from "../contexts/Auth"
 import "./RecipeDetails.css"
 
 const RecipeDetails = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const {
     getRecipe,
     addToFavorites,
     removeFromFavorites,
     isFavorite: checkFavorite,
+    deleteRecipe,
   } = useRecipes()
   const [recipe, setRecipe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isFavorite, setIsFavorite] = useState(false)
   const [servings, setServings] = useState(1)
+  const [isOwner, setIsOwner] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -38,8 +44,22 @@ const RecipeDetails = () => {
           setServings(recipeData.servings)
 
           // Check if recipe is favorited
-          const favoriteStatus = await checkFavorite(parseInt(id))
+          const favoriteStatus = await checkFavorite(
+            recipeData._id || recipeData.id
+          )
           setIsFavorite(favoriteStatus)
+
+          // Check if the current user is the recipe owner
+          if (
+            user &&
+            recipeData.author &&
+            (user._id === recipeData.author._id ||
+              user.id === recipeData.author._id ||
+              user._id === recipeData.author ||
+              user.id === recipeData.author)
+          ) {
+            setIsOwner(true)
+          }
         } else {
           setError("Recipe not found")
         }
@@ -54,17 +74,18 @@ const RecipeDetails = () => {
     if (id) {
       fetchRecipe()
     }
-  }, [id, getRecipe, checkFavorite])
+  }, [id, getRecipe, checkFavorite, user])
 
   const handleFavoriteToggle = async () => {
     try {
+      const recipeId = recipe._id || recipe.id
       if (isFavorite) {
-        const success = await removeFromFavorites(parseInt(recipe.id))
+        const success = await removeFromFavorites(recipeId)
         if (success) {
           setIsFavorite(false)
         }
       } else {
-        const success = await addToFavorites(parseInt(recipe.id))
+        const success = await addToFavorites(recipeId)
         if (success) {
           setIsFavorite(true)
         }
@@ -74,26 +95,28 @@ const RecipeDetails = () => {
     }
   }
 
-  const handleServingsChange = (newServings) => {
-    if (newServings > 0) {
-      setServings(newServings)
+  // Handle delete recipe
+  const handleDeleteRecipe = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this recipe? This action cannot be undone."
+      )
+    ) {
+      setIsDeleting(true)
+      try {
+        const result = await deleteRecipe(id)
+        if (result.success) {
+          navigate("/profile")
+        } else {
+          setError(result.error || "Failed to delete recipe")
+        }
+      } catch (err) {
+        console.error("Error deleting recipe:", err)
+        setError("Failed to delete recipe")
+      } finally {
+        setIsDeleting(false)
+      }
     }
-  }
-
-  const getAdjustedAmount = (originalAmount, originalServings) => {
-    const multiplier = servings / originalServings
-    const match = originalAmount.match(/^(\d+(?:\.\d+)?)\s*(.*)$/)
-
-    if (match) {
-      const amount = parseFloat(match[1])
-      const unit = match[2]
-      const adjustedAmount = (amount * multiplier)
-        .toFixed(2)
-        .replace(/\.?0+$/, "")
-      return `${adjustedAmount} ${unit}`
-    }
-
-    return originalAmount
   }
 
   if (loading) {
@@ -124,22 +147,41 @@ const RecipeDetails = () => {
       <div className="container">
         {/* Header */}
         <div className="recipe-header">
-          <button onClick={() => navigate("/recipes")} className="back-btn">
-            <FiArrowLeft /> Back to Recipes
+          <button onClick={() => navigate(-1)} className="btn btn-outline">
+            <FiArrowLeft /> Back
           </button>
 
           <div className="recipe-hero">
             <div className="recipe-image-large">
-              <span className="recipe-emoji-large">{recipe.image}</span>
+              <img
+                src={`/recipe-images/${recipe.image || `${recipe.title}.jpg`}`}
+                alt={recipe.imageAltText || recipe.title}
+                className="recipe-img"
+                onError={(e) => {
+                  e.target.onerror = null
+                  e.target.style.display = "none"
+                  e.target.parentNode.querySelector(
+                    ".recipe-name-placeholder"
+                  ).style.display = "flex"
+                }}
+              />
+              <span
+                className="recipe-name-placeholder"
+                style={{ display: recipe.image ? "none" : "flex" }}
+              >
+                {recipe.title}
+              </span>
             </div>
 
             <div className="recipe-info">
               <div className="recipe-badges">
-                {recipe.tags.map((tag) => (
-                  <span key={tag} className="tag">
-                    {tag}
-                  </span>
-                ))}
+                {recipe.tags &&
+                  recipe.tags.length > 0 &&
+                  recipe.tags.map((tag) => (
+                    <span key={tag} className="tag">
+                      {tag}
+                    </span>
+                  ))}
               </div>
 
               <h1 className="recipe-title">{recipe.title}</h1>
@@ -174,9 +216,52 @@ const RecipeDetails = () => {
                 >
                   <FiHeart /> {isFavorite ? "Favorited" : "Add to Favorites"}
                 </button>
-                <button className="btn btn-primary">
-                  <FiPlus /> Add to Meal Plan
-                </button>
+
+                {/* Edit and Delete buttons for recipe owner */}
+                {isOwner && (
+                  <div className="owner-actions">
+                    <Link
+                      to={`/edit-recipe/${recipe._id || recipe.id}`}
+                      className="btn btn-outline edit-btn"
+                    >
+                      <FiEdit /> Edit Recipe
+                    </Link>
+                    <button
+                      onClick={handleDeleteRecipe}
+                      className="btn btn-outline delete-btn"
+                      disabled={isDeleting}
+                    >
+                      <FiTrash2 />{" "}
+                      {isDeleting ? "Deleting..." : "Delete Recipe"}
+                    </button>
+                  </div>
+                )}
+                {isOwner && (
+                  <div className="owner-actions">
+                    <Link
+                      to={`/edit-recipe/${recipe._id || recipe.id}`}
+                      className="btn btn-edit"
+                    >
+                      <FiEdit /> Edit Recipe
+                    </Link>
+                    <button
+                      className="btn btn-delete"
+                      onClick={handleDeleteRecipe}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm"></span>
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <FiTrash2 /> Delete Recipe
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -250,61 +335,23 @@ const RecipeDetails = () => {
           </div>
 
           <div className="recipe-main">
-            {/* Ingredients */}
-            {recipe.ingredients && recipe.ingredients.length > 0 && (
-              <div className="ingredients-section">
-                <div className="section-header">
-                  <h3>Ingredients</h3>
-                  <div className="servings-adjuster">
-                    <span>Servings:</span>
-                    <button
-                      onClick={() => handleServingsChange(servings - 1)}
-                      className="serving-btn"
-                    >
-                      -
-                    </button>
-                    <span className="serving-count">{servings}</span>
-                    <button
-                      onClick={() => handleServingsChange(servings + 1)}
-                      className="serving-btn"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className="ingredients-list">
-                  {recipe.ingredients.map((ingredient, index) => (
-                    <div key={index} className="ingredient-item">
-                      <input type="checkbox" id={`ingredient-${index}`} />
-                      <label htmlFor={`ingredient-${index}`}>
-                        <span className="ingredient-amount">
-                          {getAdjustedAmount(
-                            ingredient.amount,
-                            recipe.servings
-                          )}
-                        </span>
-                        <span className="ingredient-name">
-                          {ingredient.name}
-                        </span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Instructions */}
             {recipe.instructions && recipe.instructions.length > 0 && (
               <div className="instructions-section">
                 <h3>Instructions</h3>
                 <div className="instructions-list">
-                  {recipe.instructions.map((instruction, index) => (
-                    <div key={index} className="instruction-item">
-                      <div className="instruction-number">{index + 1}</div>
-                      <div className="instruction-text">{instruction}</div>
-                    </div>
-                  ))}
+                  {recipe.instructions &&
+                    recipe.instructions.length > 0 &&
+                    recipe.instructions.map((instruction, index) => (
+                      <div key={index} className="instruction-item">
+                        <div className="instruction-number">{index + 1}</div>
+                        <div className="instruction-text">
+                          {typeof instruction === "string"
+                            ? instruction
+                            : instruction.instruction}
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}
